@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Employee Task Tracker</title>
+    <style>
+        :root { 
+            --primary: #2563eb; 
+            --bg: #f8fafc; 
+            --text-main: #1e293b; 
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --name-color: #5C5DC4; 
+        }
+
+        body { 
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
+            background-color: var(--bg); 
+            margin: 0; 
+            padding: 20px 15px; 
+            color: var(--text-main); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding-bottom: 80px; 
+        }
+
+        .main-container { width: 100%; max-width: 500px; }
+
+        .card { 
+            background: white; 
+            border-radius: 16px; 
+            padding: 24px; 
+            box-shadow: var(--card-shadow); 
+            margin-bottom: 24px; 
+            border: 1px solid #f1f5f9; 
+        }
+
+        /* Dotted Underline / Divider Styling */
+        .divider {
+            border-top: 2px dotted #e2e8f0;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .user-details h1 { margin: 0; color: var(--name-color); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; }
+        .user-details p { margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
+        .pfp { width: 52px; height: 52px; border-radius: 50%; cursor: pointer; border: 2px solid var(--primary); object-fit: cover; background: #eff6ff; }
+
+        .stats-container { display: flex; gap: 12px; }
+        .stat-box { flex: 1; background: #f1f5f9; padding: 16px; border-radius: 12px; text-align: center; }
+        .stat-box small { display: block; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .stat-box b { font-size: 1.5rem; color: var(--primary); font-weight: 800; }
+
+        .card-title { color: var(--primary); margin: 0 0 20px 0; font-size: 1.1rem; font-weight: 800; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 1rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); }
+        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
+
+        .section-label { color: var(--primary); font-weight: 800; margin: 10px 0 15px 4px; font-size: 1.1rem; }
+        .month-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 12px; }
+        .month-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; }
+        .month-title { font-weight: 800; font-size: 1rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .month-total-pill { color: var(--primary); font-weight: 800; font-size: 1.1rem; }
+
+        .history-list { display: none; }
+
+        .record-item { padding: 16px 20px; border-top: 1px solid #f1f5f9; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .record-info b { display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+        .record-info span { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
+        
+        .action-side { display: flex; align-items: center; gap: 12px; }
+        .record-count { font-weight: 800; font-size: 1.1rem; color: var(--text-main); margin-right: 5px; }
+        
+        .icon-btn { border: none; background: none; padding: 8px; cursor: pointer; border-radius: 8px; transition: background 0.2s; font-size: 1.1rem; -webkit-tap-highlight-color: transparent; }
+        .edit-icon { color: var(--primary); }
+        .delete-icon { color: var(--danger); }
+
+        #toast { 
+            visibility: hidden; min-width: 250px; background-color: #334155; color: #fff; 
+            text-align: center; border-radius: 12px; padding: 16px; position: fixed; 
+            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+        .modal-content { background: white; padding: 28px; border-radius: 20px; width: 90%; max-width: 380px; }
+        
+        .delete-confirm-box { text-align: center; }
+        .delete-confirm-box h3 { margin-top: 0; color: var(--text-main); }
+        .delete-confirm-box p { color: var(--text-muted); margin-bottom: 24px; }
+        .modal-btns { display: flex; gap: 12px; }
+        .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-confirm-del { flex: 1; background: var(--danger); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="toast">Message</div>
+
+<div class="main-container">
+    <div class="card">
+        <div class="profile-header">
+            <div class="user-details">
+                <h1 id="disp-name">Loading...</h1>
+                <p id="disp-id">ID: ---</p>
+            </div>
+            <img id="disp-img" src="" class="pfp" onclick="toggleModal('modal')">
+        </div>
+        <div class="stats-container">
+            <div class="stat-box">
+                <small>Today</small>
+                <b id="daily-total">0</b>
+            </div>
+            <div class="stat-box">
+                <small>This Month</small>
+                <b id="monthly-total">0</b>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">Filter by Pincode</h3>
+        <input type="number" id="filter-pin-input" placeholder="Enter Pincode to search" oninput="runFilter()">
+        
+        <div class="divider"></div>
+
+        <div id="filter-output" class="filter-results">
+            <div style="color: var(--text-muted); text-align: center; font-size: 0.9rem;">Enter a pincode to see daily/monthly stats</div>
+        </div>
+    </div>
+
+    <div class="card" id="task-card-section">
+        <h3 class="card-title">Add New Task</h3>
+        <input type="text" id="company" list="comp-list" placeholder="Company Name" oninput="forceCap(this)">
+        <datalist id="comp-list"></datalist>
+        <input type="number" id="pincode" list="pin-list" placeholder="Area Pincode">
+        <datalist id="pin-list"></datalist>
+        <input type="number" id="count" placeholder="Number of Tasks">
+        <input type="hidden" id="edit-idx" value="-1">
+        <button class="btn-save" id="btn-text" onclick="saveData()">Save Entry</button>
+    </div>
+
+    <div class="section-label">Recent Activity</div>
+    <div id="history-container"></div>
+</div>
+
+<div id="modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="color:var(--primary); margin-top:0; font-weight:800;">Edit Profile</h3>
+        <input type="text" id="edit-name" placeholder="Name">
+        <input type="text" id="edit-emp-id" placeholder="Employee ID">
+        <input type="text" id="edit-img" placeholder="Profile Pic URL">
+        <button class="btn-save" onclick="updateProfile()">Update Profile</button>
+        <button style="width:100%; background:none; color:var(--text-muted); border:none; margin-top:16px; font-weight:700; cursor:pointer;" onclick="toggleModal('modal')">Close</button>
+    </div>
+</div>
+
+<div id="delete-modal" class="modal-overlay">
+    <div class="modal-content delete-confirm-box">
+        <h3>Delete Record?</h3>
+        <p>This action cannot be undone. Do you want to remove this task permanently?</p>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="toggleModal('delete-modal')">Cancel</button>
+            <button class="btn-confirm-del" id="confirm-delete-btn">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('emp_db')) || [];
+    let user = JSON.parse(localStorage.getItem('emp_user')) || { name: "Alex Rivera", id: "EMP-2026-08", pic: "https://ui-avatars.com/api/?name=Alex+Rivera&background=0D8ABC&color=fff" };
+    let deleteTargetIdx = -1;
+
+    function init() {
+        renderProfile();
+        renderHistory();
+        updateLists();
+        runFilter();
+    }
+
+    function showToast(msg, isError = false) {
+        const t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.backgroundColor = isError ? "#ef4444" : "#334155";
+        t.className = "show";
+        setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+    }
+
+    function forceCap(i) { i.value = i.value.charAt(0).toUpperCase() + i.value.slice(1); }
+
+    function toggleModal(id) {
+        const m = document.getElementById(id);
+        m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
+        if(id === 'modal' && m.style.display === 'flex') {
+            document.getElementById('edit-name').value = user.name;
+            document.getElementById('edit-emp-id').value = user.id;
+            document.getElementById('edit-img').value = user.pic;
+        }
+    }
+
+    function updateProfile() {
+        user = {
+            name: document.getElementById('edit-name').value || "User Name",
+            id: document.getElementById('edit-emp-id').value || "ID-000",
+            pic: document.getElementById('edit-img').value || `https://ui-avatars.com/api/?name=${document.getElementById('edit-name').value}`
+        };
+        localStorage.setItem('emp_user', JSON.stringify(user));
+        renderProfile();
+        toggleModal('modal');
+        showToast("Profile Updated");
+    }
+
+    function renderProfile() {
+        document.getElementById('disp-name').innerText = user.name;
+        document.getElementById('disp-id').innerText = "ID: " + user.id;
+        document.getElementById('disp-img').src = user.pic;
+    }
+
+    function saveData() {
+        const comp = document.getElementById('company').value;
+        const pin = document.getElementById('pincode').value;
+        const cntInput = document.getElementById('count').value;
+        const cnt = parseInt(cntInput);
+        const idx = parseInt(document.getElementById('edit-idx').value);
+
+        if(!comp || !pin || cntInput === "" || isNaN(cnt)) {
+            showToast("Please fill all fields correctly", true);
+            return;
+        }
+
+        const item = { comp, pin, cnt, time: new Date().toISOString() };
+        
+        if(idx > -1) {
+            db[idx] = item;
+            document.getElementById('edit-idx').value = "-1";
+            document.getElementById('btn-text').innerText = "Save Entry";
+            showToast("Record Updated");
+        } else {
+            db.push(item);
+            showToast("Entry Saved");
+        }
+
+        localStorage.setItem('emp_db', JSON.stringify(db));
+        ['company','pincode','count'].forEach(id => document.getElementById(id).value = '');
+        renderHistory();
+        updateLists();
+        runFilter();
+    }
+
+    function deleteItem(idx) {
+        deleteTargetIdx = idx;
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        confirmBtn.onclick = () => {
+            db.splice(deleteTargetIdx, 1);
+            localStorage.setItem('emp_db', JSON.stringify(db));
+            renderHistory();
+            updateLists();
+            runFilter();
+            showToast("Record Deleted");
+            toggleModal('delete-modal');
+        };
+        toggleModal('delete-modal');
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('history-container');
+        const now = new Date();
+        let dTot = 0, mTot = 0;
+
+        const months = db.reduce((acc, t, index) => {
+            const dt = new Date(t.time);
+            const mKey = dt.toLocaleString('default', { month: 'long', year: 'numeric' });
+            if(!acc[mKey]) acc[mKey] = { items: [], total: 0 };
+            acc[mKey].items.push({...t, originalIdx: index});
+            acc[mKey].total += t.cnt;
+            return acc;
+        }, {});
+
+        container.innerHTML = '';
+        
+        db.forEach(t => {
+            const tDate = new Date(t.time);
+            if(tDate.toDateString() === now.toDateString()) dTot += t.cnt;
+            if(tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear()) mTot += t.cnt;
+        });
+
+        Object.keys(months).reverse().forEach(mKey => {
+            const data = months[mKey];
+            const section = document.createElement('div');
+            section.className = 'month-card';
+            section.innerHTML = `
+                <div class="month-header" onclick="toggleSection(this)">
+                    <div class="month-title">🗓 ${mKey}</div>
+                    <div class="month-total-pill">₹${data.total} <span style="font-size:0.7rem; vertical-align:middle">▼</span></div>
+                </div>
+                <div class="history-list">
+                    ${data.items.slice().reverse().map(item => {
+                        const d = new Date(item.time);
+                        return `
+                        <div class="record-item">
+                            <div class="record-info">
+                                <b>${item.comp}</b>
+                                <span>Pin: ${item.pin} • ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div class="action-side">
+                                <div class="record-count">₹${item.cnt}</div>
+                                <button class="icon-btn edit-icon" onclick="editItem(${item.originalIdx})">✏️</button>
+                                <button class="icon-btn delete-icon" onclick="deleteItem(${item.originalIdx})">🗑️</button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            container.appendChild(section);
+        });
+
+        document.getElementById('daily-total').innerText = dTot;
+        document.getElementById('monthly-total').innerText = mTot;
+    }
+
+    function toggleSection(el) {
+        const list = el.nextElementSibling;
+        const isHidden = window.getComputedStyle(list).display === 'none';
+        list.style.display = isHidden ? 'block' : 'none';
+    }
+
+    function runFilter() {
+        const filterVal = document.getElementById('filter-pin-input').value;
+        const output = document.getElementById('filter-output');
+        if(!filterVal) {
+            output.innerHTML = `<div style="color: var(--text-muted); text-align: center; font-size: 0.9rem;">Enter a pincode to see daily/monthly stats</div>`;
+            return;
+        }
+        const now = new Date();
+        const dailyMatches = db.filter(t => t.pin == filterVal && new Date(t.time).toDateString() === now.toDateString());
+        const monthlyMatches = db.filter(t => t.pin == filterVal && new Date(t.time).getMonth() === now.getMonth() && new Date(t.time).getFullYear() === now.getFullYear());
+        const dailyTotal = dailyMatches.reduce((sum, t) => sum + t.cnt, 0);
+        const monthlyTotal = monthlyMatches.reduce((sum, t) => sum + t.cnt, 0);
+        const getComps = (arr) => [...new Set(arr.map(t => t.comp))].join(', ') || 'None';
+        output.innerHTML = `
+            <div class="filter-item"><span>Today's Total:</span> <b>${dailyTotal}</b></div>
+            <div class="filter-item" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Companies: ${getComps(dailyMatches)}</div>
+            <div class="filter-item"><span>This Month's Total:</span> <b>${monthlyTotal}</b></div>
+            <div class="filter-item" style="font-size: 0.8rem; color: var(--text-muted);">Companies: ${getComps(monthlyMatches)}</div>
+        `;
+    }
+
+    function editItem(idx) {
+        const t = db[idx];
+        document.getElementById('company').value = t.comp;
+        document.getElementById('pincode').value = t.pin;
+        document.getElementById('count').value = t.cnt;
+        document.getElementById('edit-idx').value = idx;
+        document.getElementById('btn-text').innerText = "Update Record";
+        document.getElementById('task-card-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast("Editing Record...");
+    }
+
+    function updateLists() {
+        const comps = [...new Set(db.map(t => t.comp))];
+        const pins = [...new Set(db.map(t => t.pin))];
+        document.getElementById('comp-list').innerHTML = comps.map(c => `<option value="${c}">`).join('');
+        document.getElementById('pin-list').innerHTML = pins.map(p => `<option value="${p}">`).join('');
+    }
+
+    init();
+</script>
+</body>
+</html>
