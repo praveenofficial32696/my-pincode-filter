@@ -38,7 +38,6 @@
             border: 1px solid #f1f5f9; 
         }
 
-        /* Dotted Underline / Divider Styling */
         .divider {
             border-top: 2px dotted #e2e8f0;
             margin: 20px 0;
@@ -61,12 +60,17 @@
         .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
 
         .section-label { color: var(--primary); font-weight: 800; margin: 10px 0 15px 4px; font-size: 1.1rem; }
+        
         .month-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 12px; }
-        .month-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; }
+        .month-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; border-bottom: 1px solid #f1f5f9; }
         .month-title { font-weight: 800; font-size: 1rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         .month-total-pill { color: var(--primary); font-weight: 800; font-size: 1.1rem; }
 
+        .day-group { border-bottom: 1px solid #f1f5f9; }
+        .day-header { padding: 12px 20px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
+        
         .history-list { display: none; }
+        .day-content { display: none; }
 
         .record-item { padding: 16px 20px; border-top: 1px solid #f1f5f9; background: #fff; display: flex; justify-content: space-between; align-items: center; }
         .record-info b { display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
@@ -275,12 +279,18 @@
         const now = new Date();
         let dTot = 0, mTot = 0;
 
-        const months = db.reduce((acc, t, index) => {
+        const groupedData = db.reduce((acc, t, index) => {
             const dt = new Date(t.time);
-            const mKey = dt.toLocaleString('default', { month: 'long', year: 'numeric' });
-            if(!acc[mKey]) acc[mKey] = { items: [], total: 0 };
-            acc[mKey].items.push({...t, originalIdx: index});
-            acc[mKey].total += t.cnt;
+            const monthKey = dt.toLocaleString('default', { month: 'long', year: 'numeric' });
+            const dateKey = dt.toLocaleDateString('default', { weekday: 'short', day: '2-digit', month: 'short' });
+
+            if (!acc[monthKey]) acc[monthKey] = { total: 0, days: {} };
+            if (!acc[monthKey].days[dateKey]) acc[monthKey].days[dateKey] = { total: 0, items: [] };
+
+            acc[monthKey].total += t.cnt;
+            acc[monthKey].days[dateKey].total += t.cnt;
+            acc[monthKey].days[dateKey].items.push({...t, originalIdx: index});
+
             return acc;
         }, {});
 
@@ -292,33 +302,50 @@
             if(tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear()) mTot += t.cnt;
         });
 
-        Object.keys(months).reverse().forEach(mKey => {
-            const data = months[mKey];
-            const section = document.createElement('div');
-            section.className = 'month-card';
-            section.innerHTML = `
+        Object.keys(groupedData).reverse().forEach(mKey => {
+            const monthData = groupedData[mKey];
+            const monthSection = document.createElement('div');
+            monthSection.className = 'month-card';
+            
+            let daysHtml = '';
+            Object.keys(monthData.days).reverse().forEach(dKey => {
+                const dayData = monthData.days[dKey];
+                daysHtml += `
+                    <div class="day-group">
+                        <div class="day-header" onclick="toggleSubSection(this)">
+                            <span>📅 ${dKey}</span>
+                            <span>${dayData.total} ▾</span>
+                        </div>
+                        <div class="day-content">
+                            ${dayData.items.slice().reverse().map(item => {
+                                const d = new Date(item.time);
+                                return `
+                                <div class="record-item">
+                                    <div class="record-info">
+                                        <b>${item.comp}</b>
+                                        <span>Pin: ${item.pin} • ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                    <div class="action-side">
+                                        <div class="record-count">${item.cnt}</div>
+                                        <button class="icon-btn edit-icon" onclick="editItem(${item.originalIdx})">✏️</button>
+                                        <button class="icon-btn delete-icon" onclick="deleteItem(${item.originalIdx})">🗑️</button>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+            });
+
+            monthSection.innerHTML = `
                 <div class="month-header" onclick="toggleSection(this)">
                     <div class="month-title">🗓 ${mKey}</div>
-                    <div class="month-total-pill">₹${data.total} <span style="font-size:0.7rem; vertical-align:middle">▼</span></div>
+                    <div class="month-total-pill">${monthData.total} <span style="font-size:0.7rem; vertical-align:middle">▼</span></div>
                 </div>
                 <div class="history-list">
-                    ${data.items.slice().reverse().map(item => {
-                        const d = new Date(item.time);
-                        return `
-                        <div class="record-item">
-                            <div class="record-info">
-                                <b>${item.comp}</b>
-                                <span>Pin: ${item.pin} • ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                            </div>
-                            <div class="action-side">
-                                <div class="record-count">₹${item.cnt}</div>
-                                <button class="icon-btn edit-icon" onclick="editItem(${item.originalIdx})">✏️</button>
-                                <button class="icon-btn delete-icon" onclick="deleteItem(${item.originalIdx})">🗑️</button>
-                            </div>
-                        </div>`;
-                    }).join('')}
+                    ${daysHtml}
                 </div>`;
-            container.appendChild(section);
+            
+            container.appendChild(monthSection);
         });
 
         document.getElementById('daily-total').innerText = dTot;
@@ -329,6 +356,12 @@
         const list = el.nextElementSibling;
         const isHidden = window.getComputedStyle(list).display === 'none';
         list.style.display = isHidden ? 'block' : 'none';
+    }
+
+    function toggleSubSection(el) {
+        const content = el.nextElementSibling;
+        const isHidden = window.getComputedStyle(content).display === 'none';
+        content.style.display = isHidden ? 'block' : 'none';
     }
 
     function runFilter() {
