@@ -427,10 +427,19 @@
             showSuggestions(inp, pincodes, 'pincode-suggestions');
         };
 
-        // close suggestions when clicking outside
+        // NEW: hide suggestions when clicking outside the respective input
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.input-wrapper')) {
-                hideAllSuggestions();
+            const companyInput = document.getElementById('company');
+            const companyWrapper = companyInput.closest('.input-wrapper');
+            // Hide company suggestions if click is outside its wrapper AND outside its suggestion box
+            if (companyWrapper && !companyWrapper.contains(e.target) && !e.target.closest('#company-suggestions')) {
+                document.getElementById('company-suggestions').classList.remove('show');
+            }
+
+            const pincodeInput = document.getElementById('pincode');
+            const pincodeWrapper = pincodeInput.closest('.input-wrapper');
+            if (pincodeWrapper && !pincodeWrapper.contains(e.target) && !e.target.closest('#pincode-suggestions')) {
+                document.getElementById('pincode-suggestions').classList.remove('show');
             }
         });
 
