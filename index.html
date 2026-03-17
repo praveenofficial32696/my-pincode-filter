@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Employee Task Tracker · manual paste after Google Lens</title>
+    <title>Employee Task Tracker · bulk entry modal</title>
     <!-- Tesseract.js is kept but not used (preserved for reference) -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
     <style>
@@ -59,7 +59,7 @@
         .card-title { color: var(--primary); margin: 0 0 20px 0; font-size: 1.1rem; font-weight: 800; }
         
         /* base input style (unchanged) */
-        input, select { 
+        input, select, textarea { 
             width: 100%; 
             padding: 14px; 
             margin-bottom: 12px; 
@@ -69,8 +69,9 @@
             box-sizing: border-box; 
             outline: none; 
             transition: border-color 0.2s; 
+            font-family: inherit;
         }
-        input:focus, select:focus { border-color: var(--primary); }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 
         /* custom suggestion container */
         .input-wrapper {
@@ -251,8 +252,8 @@
         .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         .btn-confirm-del { flex: 1; background: var(--danger); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
 
-        /* capture button style (unchanged) */
-        .capture-btn {
+        /* bulk entry button style (same as old capture button) */
+        .bulk-btn {
             flex: 1;
             background: #f1f5f9;
             border: 1px solid #e2e8f0;
@@ -261,8 +262,10 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
+            width: 100%;
+            margin-bottom: 12px;
         }
-        .capture-btn:hover {
+        .bulk-btn:hover {
             background: #e2e8f0;
         }
     </style>
@@ -300,7 +303,7 @@
         </div>
     </div>
 
-    <!-- ADD NEW TASK with custom suggestion boxes and capture button (UI unchanged) -->
+    <!-- ADD NEW TASK with custom suggestion boxes and BULK ENTRY button (modal) -->
     <div class="card" id="task-card-section">
         <h3 class="card-title">Add New Task</h3>
         
@@ -316,11 +319,8 @@
 
         <input type="number" id="count" placeholder="Number of Tasks">
 
-        <!-- Capture button & hidden file input – behaviour changed: opens image for Google Lens copying -->
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <button type="button" id="capture-btn" class="capture-btn">📷 Open image for Google Lens</button>
-            <input type="file" id="image-upload" accept="image/*" style="display: none;">
-        </div>
+        <!-- Bulk Entry button (replaces old capture button + file input) -->
+        <button type="button" id="bulk-entry-btn" class="bulk-btn">📋 Bulk Entry</button>
 
         <input type="hidden" id="edit-idx" value="-1">
         <button class="btn-save" id="btn-text" onclick="saveData()">Save Entry</button>
@@ -330,7 +330,7 @@
     <div id="history-container"></div>
 </div>
 
-<!-- modals unchanged -->
+<!-- Profile modal (unchanged) -->
 <div id="modal" class="modal-overlay">
     <div class="modal-content">
         <h3 style="color:var(--primary); margin-top:0; font-weight:800;">Edit Profile</h3>
@@ -342,6 +342,7 @@
     </div>
 </div>
 
+<!-- Delete modal (unchanged) -->
 <div id="delete-modal" class="modal-overlay">
     <div class="modal-content delete-confirm-box">
         <h3>Delete Record?</h3>
@@ -353,7 +354,20 @@
     </div>
 </div>
 
-<!-- Main application script (unchanged except removal of batch OCR method) -->
+<!-- NEW BULK ENTRY MODAL -->
+<div id="bulk-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 style="color:var(--primary); margin-top:0; font-weight:800;">Bulk Entry</h3>
+        <p style="color: var(--text-muted); margin-bottom: 16px;">Paste one or more lines copied from Google Lens (e.g., "606804 HDFC 1")</p>
+        <textarea id="bulk-paste-area" placeholder="Paste here..." rows="5" style="width:100%; padding:14px; border:1px solid #e2e8f0; border-radius:12px; font-size:1rem; box-sizing:border-box; margin-bottom:20px; resize:vertical;"></textarea>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="toggleBulkModal(false)">Cancel</button>
+            <button class="btn-save" id="bulk-save-btn" style="flex:1;">Save Entry</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main application script (unchanged core, plus new bulk functions) -->
 <script>
     (function() {
         // ---------- DATA ----------
@@ -655,6 +669,77 @@
             `;
         };
 
+        // ---------- BULK ENTRY FUNCTIONS (new) ----------
+        window.toggleBulkModal = function(show) {
+            const m = document.getElementById('bulk-modal');
+            if (show !== undefined) {
+                m.style.display = show ? 'flex' : 'none';
+            } else {
+                m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
+            }
+            if (m.style.display === 'flex') {
+                document.getElementById('bulk-paste-area').value = ''; // clear on open
+            }
+        };
+
+        function addEntriesFromBulk() {
+            const raw = document.getElementById('bulk-paste-area').value;
+            const lines = raw.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
+            const entries = [];
+            // Regex: 6 digits, then company name (any chars), then optional number (default 1)
+            const entryRegex = /^(\d{6})\s+(.+?)\s*(\d*)$/;
+
+            for (let line of lines) {
+                const match = line.match(entryRegex);
+                if (match) {
+                    const pincode = match[1];
+                    let company = match[2].trim();
+                    // Capitalize first letter
+                    if (company.length > 0) {
+                        company = company.charAt(0).toUpperCase() + company.slice(1);
+                    }
+                    let taskCount = match[3] ? parseInt(match[3], 10) : 1;
+                    if (isNaN(taskCount) || taskCount <= 0) taskCount = 1;
+                    entries.push({ comp: company, pin: pincode, cnt: taskCount });
+                }
+            }
+
+            if (entries.length === 0) {
+                showToast("No valid entries found in pasted text", true);
+                return false;
+            }
+
+            // Add all valid entries
+            entries.forEach(e => {
+                db.push({ 
+                    comp: e.comp, 
+                    pin: e.pin, 
+                    cnt: e.cnt, 
+                    time: new Date().toISOString() 
+                });
+            });
+
+            localStorage.setItem('emp_db', JSON.stringify(db));
+            updateSuggestionPools();
+            renderHistory();
+            runFilter();
+            showToast(`✅ Added ${entries.length} entr${entries.length > 1 ? 'ies' : 'y'} from bulk paste`);
+            return true;
+        }
+
+        // Wire up bulk save button
+        document.getElementById('bulk-save-btn').addEventListener('click', function() {
+            const success = addEntriesFromBulk();
+            if (success) {
+                toggleBulkModal(false);
+            }
+        });
+
+        // Open bulk modal when clicking Bulk Entry button
+        document.getElementById('bulk-entry-btn').addEventListener('click', function() {
+            toggleBulkModal(true);
+        });
+
         // ---------- INIT ----------
         function setDefaultMonth() {
             const d = new Date();
@@ -679,43 +764,6 @@
     })();
 </script>
 
-<!-- New capture script: opens image in new tab for Google Lens copying, no OCR -->
-<script>
-    (function() {
-        const captureBtn = document.getElementById('capture-btn');
-        const fileInput = document.getElementById('image-upload');
-        const toast = document.getElementById('toast');
-
-        function showMessage(msg, isError = false) {
-            toast.innerText = msg;
-            toast.style.backgroundColor = isError ? '#ef4444' : '#334155';
-            toast.className = 'show';
-            setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
-        }
-
-        captureBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Create object URL and open image in new tab
-            const imageUrl = URL.createObjectURL(file);
-            window.open(imageUrl, '_blank');
-
-            showMessage('📸 Image opened in new tab. Use Google Lens to copy text, then paste into fields.');
-
-            // Clean up object URL after a delay (not immediate to keep tab open)
-            setTimeout(() => URL.revokeObjectURL(imageUrl), 60000);
-
-            // Reset file input so same image can be selected again if needed
-            fileInput.value = '';
-        });
-    })();
-</script>
-
-<!-- Note: Tesseract script is still included but not used – all existing functionalities untouched -->
+<!-- Tesseract script remains but is unused – all existing functionalities untouched -->
 </body>
 </html>
