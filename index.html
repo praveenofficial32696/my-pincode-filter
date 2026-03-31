@@ -80,7 +80,27 @@
             margin-bottom: 12px;
         }
         .input-wrapper input {
-            margin-bottom: 0; /* margin handled by wrapper */
+            margin-bottom: 0;
+        }
+
+        /* date picker wrapper */
+        .date-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .date-wrapper input {
+            margin-bottom: 0;
+            padding-left: 44px;
+        }
+        .calendar-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            font-size: 1.2rem;
+            color: var(--text-muted);
         }
 
         .suggestion-box {
@@ -97,7 +117,7 @@
             z-index: 50;
             display: none;
             overflow: hidden;
-            font-size: 0.85rem;   /* smaller than input */
+            font-size: 0.85rem;
         }
         .suggestion-item {
             padding: 12px 16px;
@@ -117,7 +137,7 @@
 
         .section-label { color: var(--primary); font-weight: 800; margin: 10px 0 15px 4px; font-size: 1.1rem; }
         
-        /* filter row with month & pincode – inputs same size as task card */
+        /* filter row with month & pincode */
         .filter-row {
             display: flex;
             gap: 12px;
@@ -142,7 +162,6 @@
             font-size: 1rem;
         }
 
-        /* mobile optimization: stack inputs on very small screens */
         @media (max-width: 400px) {
             .filter-row .month-input,
             .filter-row .pin-input {
@@ -165,7 +184,7 @@
             font-size: 0.9rem;
         }
 
-        /* month history cards (preserved style) */
+        /* month history cards - ascending order support */
         .month-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 12px; }
         .month-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; border-bottom: 1px solid #f1f5f9; }
         .month-title { font-weight: 800; font-size: 1rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
@@ -177,27 +196,26 @@
         .history-list { display: none; }
         .day-content { display: none; }
 
-        /* Updated record-item styles for proper alignment */
         .record-item { 
             padding: 16px 20px; 
             border-top: 1px solid #f1f5f9; 
             background: #fff; 
             display: flex; 
             justify-content: space-between; 
-            align-items: flex-start; /* changed from center to align top */
+            align-items: flex-start;
         }
         .record-info {
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            gap: 2px;               /* one-backspace gap between number and content */
+            gap: 2px;
             flex: 1;
         }
         .number-badge { 
             color: var(--text-muted); 
             font-weight: 600; 
             font-size: 0.9rem; 
-            min-width: 24px;         /* fixed width for alignment */
+            min-width: 24px;
         }
         .record-content {
             flex: 1;
@@ -218,7 +236,7 @@
             display: flex; 
             align-items: center; 
             gap: 12px; 
-            margin-left: 12px;       /* keep some distance from text */
+            margin-left: 12px;
         }
         .record-count { 
             font-weight: 800; 
@@ -252,7 +270,6 @@
         .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         .btn-confirm-del { flex: 1; background: var(--danger); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
 
-        /* bulk entry button style (same as old capture button) */
         .bulk-btn {
             flex: 1;
             background: #f1f5f9;
@@ -267,6 +284,19 @@
         }
         .bulk-btn:hover {
             background: #e2e8f0;
+        }
+        
+        /* validation error style */
+        .error-border {
+            border-color: var(--danger) !important;
+            background-color: #fff5f5;
+        }
+        .validation-message {
+            color: var(--danger);
+            font-size: 0.75rem;
+            margin-top: -8px;
+            margin-bottom: 12px;
+            display: block;
         }
     </style>
 </head>
@@ -303,9 +333,16 @@
         </div>
     </div>
 
-    <!-- ADD NEW TASK with custom suggestion boxes and BULK ENTRY button (modal) -->
+    <!-- ADD NEW TASK with mandatory Date Picker field - EMPTY by default -->
     <div class="card" id="task-card-section">
         <h3 class="card-title">Add New Task</h3>
+        
+        <!-- MANDATORY DATE PICKER FIELD WITH ICON - NO AUTO-FILL, EMPTY BY DEFAULT -->
+        <div class="date-wrapper">
+            <span class="calendar-icon">📅</span>
+            <input type="date" id="task-date" required placeholder="Select Date">
+        </div>
+        <div id="date-validation-msg" class="validation-message" style="display: none;">⚠️ Please select a date before saving</div>
         
         <div class="input-wrapper">
             <input type="text" id="company" placeholder="Company Name" autocomplete="off" oninput="handleCompanyInput(); forceCap(this);">
@@ -319,18 +356,18 @@
 
         <input type="number" id="count" placeholder="Number of Tasks">
 
-        <!-- Bulk Entry button (replaces old capture button + file input) -->
         <button type="button" id="bulk-entry-btn" class="bulk-btn">📋 Bulk Entry</button>
 
         <input type="hidden" id="edit-idx" value="-1">
         <button class="btn-save" id="btn-text" onclick="saveData()">Save Entry</button>
     </div>
 
+    <!-- Removed the extra text "(Oldest → Newest)" - keeping only "Recent Activity" as requested -->
     <div class="section-label">Recent Activity</div>
     <div id="history-container"></div>
 </div>
 
-<!-- Profile modal (unchanged) -->
+<!-- Profile modal -->
 <div id="modal" class="modal-overlay">
     <div class="modal-content">
         <h3 style="color:var(--primary); margin-top:0; font-weight:800;">Edit Profile</h3>
@@ -342,7 +379,7 @@
     </div>
 </div>
 
-<!-- Delete modal (unchanged) -->
+<!-- Delete modal -->
 <div id="delete-modal" class="modal-overlay">
     <div class="modal-content delete-confirm-box">
         <h3>Delete Record?</h3>
@@ -354,7 +391,7 @@
     </div>
 </div>
 
-<!-- NEW BULK ENTRY MODAL -->
+<!-- Bulk Entry Modal -->
 <div id="bulk-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 450px;">
         <h3 style="color:var(--primary); margin-top:0; font-weight:800;">Bulk Entry</h3>
@@ -367,7 +404,6 @@
     </div>
 </div>
 
-<!-- Main application script (unchanged core, plus new bulk functions) -->
 <script>
     (function() {
         // ---------- DATA ----------
@@ -375,11 +411,13 @@
         let user = JSON.parse(localStorage.getItem('emp_user')) || { name: "Alex Rivera", id: "EMP-2026-08", pic: "https://ui-avatars.com/api/?name=Alex+Rivera&background=0D8ABC&color=fff" };
         let deleteTargetIdx = -1;
 
-        // suggestion pools
         let companyNames = [];
         let pincodes = [];
 
-        // ---------- HELPER FUNCTIONS (preserved) ----------
+        // NO DEFAULT DATE - keep empty as required
+        // We do NOT auto-fill today's date
+
+        // ---------- HELPER FUNCTIONS ----------
         function showToast(msg, isError = false) {
             const t = document.getElementById("toast");
             t.innerText = msg;
@@ -416,20 +454,17 @@
             document.getElementById('disp-img').src = user.pic;
         }
 
-        // forceCap: ensure first letter capital
         window.forceCap = function(input) { 
             if (input.value.length > 0) {
                 input.value = input.value.charAt(0).toUpperCase() + input.value.slice(1);
             }
         };
 
-        // ---------- UPDATE SUGGESTION POOLS ----------
         function updateSuggestionPools() {
             companyNames = [...new Set(db.map(t => t.comp).filter(Boolean))];
             pincodes = [...new Set(db.map(t => t.pin).filter(Boolean))];
         }
 
-        // ---------- CUSTOM SUGGESTION HANDLERS (unchanged) ----------
         function hideAllSuggestions() {
             document.getElementById('company-suggestions').classList.remove('show');
             document.getElementById('pincode-suggestions').classList.remove('show');
@@ -465,20 +500,43 @@
 
         document.addEventListener('click', (e) => {
             const companyInput = document.getElementById('company');
-            const companyWrapper = companyInput.closest('.input-wrapper');
+            const companyWrapper = companyInput?.closest('.input-wrapper');
             if (companyWrapper && !companyWrapper.contains(e.target) && !e.target.closest('#company-suggestions')) {
-                document.getElementById('company-suggestions').classList.remove('show');
+                document.getElementById('company-suggestions')?.classList.remove('show');
             }
-
             const pincodeInput = document.getElementById('pincode');
-            const pincodeWrapper = pincodeInput.closest('.input-wrapper');
+            const pincodeWrapper = pincodeInput?.closest('.input-wrapper');
             if (pincodeWrapper && !pincodeWrapper.contains(e.target) && !e.target.closest('#pincode-suggestions')) {
-                document.getElementById('pincode-suggestions').classList.remove('show');
+                document.getElementById('pincode-suggestions')?.classList.remove('show');
             }
         });
 
-        // ---------- SAVE / EDIT / DELETE (preserve date on edit) ----------
+        // Remove error highlight when user selects a date
+        const dateInputElem = document.getElementById('task-date');
+        dateInputElem.addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('error-border');
+                document.getElementById('date-validation-msg').style.display = 'none';
+            }
+        });
+
+        // ---------- SAVE with mandatory DATE (no auto-fill, empty by default) ----------
         window.saveData = function() {
+            const taskDate = document.getElementById('task-date').value;
+            const dateValidationMsg = document.getElementById('date-validation-msg');
+            const dateInput = document.getElementById('task-date');
+            
+            // Mandatory validation - field must NOT be empty
+            if (!taskDate) {
+                dateValidationMsg.style.display = 'block';
+                dateInput.classList.add('error-border');
+                showToast("Please select a date before saving the task", true);
+                return;
+            } else {
+                dateValidationMsg.style.display = 'none';
+                dateInput.classList.remove('error-border');
+            }
+            
             const comp = document.getElementById('company').value.trim();
             const pin = document.getElementById('pincode').value.trim();
             const cntInput = document.getElementById('count').value;
@@ -494,19 +552,30 @@
                 db[idx].comp = comp;
                 db[idx].pin = pin;
                 db[idx].cnt = cnt;
+                db[idx].selectedDate = taskDate;
                 document.getElementById('edit-idx').value = "-1";
                 document.getElementById('btn-text').innerText = "Save Entry";
                 showToast("Record Updated");
             } else {
-                const item = { comp, pin, cnt, time: new Date().toISOString() };
+                const item = { 
+                    comp, 
+                    pin, 
+                    cnt, 
+                    time: new Date().toISOString(),
+                    selectedDate: taskDate
+                };
                 db.push(item);
                 showToast("Entry Saved");
             }
 
             localStorage.setItem('emp_db', JSON.stringify(db));
+            // Reset form: clear all fields, date picker becomes EMPTY (no auto-fill)
             document.getElementById('company').value = '';
             document.getElementById('pincode').value = '';
             document.getElementById('count').value = '';
+            document.getElementById('task-date').value = '';  // EMPTY - no auto-fill
+            document.getElementById('date-validation-msg').style.display = 'none';
+            document.getElementById('task-date').classList.remove('error-border');
 
             updateSuggestionPools();
             renderHistory();
@@ -534,59 +603,94 @@
             document.getElementById('company').value = t.comp;
             document.getElementById('pincode').value = t.pin;
             document.getElementById('count').value = t.cnt;
+            if (t.selectedDate) {
+                document.getElementById('task-date').value = t.selectedDate;
+            } else {
+                const fallbackDate = new Date(t.time);
+                const yyyy = fallbackDate.getFullYear();
+                const mm = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(fallbackDate.getDate()).padStart(2, '0');
+                document.getElementById('task-date').value = `${yyyy}-${mm}-${dd}`;
+            }
             document.getElementById('edit-idx').value = idx;
             document.getElementById('btn-text').innerText = "Update Record";
             document.getElementById('task-card-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
             showToast("Editing Record...");
         };
 
-        // ---------- RENDER HISTORY (unchanged) ----------
+        // ---------- RENDER HISTORY - SORTED ASCENDING (Oldest Date → Newest Date) ----------
         function renderHistory() {
             const container = document.getElementById('history-container');
             const now = new Date();
             let dTot = 0, mTot = 0;
 
+            // compute daily/monthly totals
             db.forEach(t => {
-                const tDate = new Date(t.time);
+                const dateStr = t.selectedDate || t.time.split('T')[0];
+                const tDate = new Date(dateStr);
                 if(tDate.toDateString() === now.toDateString()) dTot += t.cnt;
                 if(tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear()) mTot += t.cnt;
             });
             document.getElementById('daily-total').innerText = dTot;
             document.getElementById('monthly-total').innerText = mTot;
 
-            const grouped = db.reduce((acc, t, index) => {
-                const dt = new Date(t.time);
+            // Group by month and day, but preserve actual date objects for sorting
+            const grouped = {};
+            
+            db.forEach((t, index) => {
+                let dateKeyRaw = t.selectedDate;
+                if (!dateKeyRaw) {
+                    dateKeyRaw = new Date(t.time).toISOString().split('T')[0];
+                }
+                const dt = new Date(dateKeyRaw);
                 const monthKey = dt.toLocaleString('default', { month: 'long', year: 'numeric' });
-                const day = dt.getDate().toString().padStart(2, '0');
-                const month = dt.toLocaleString('default', { month: 'short' });
+                const dayNum = dt.getDate();
+                const monthShort = dt.toLocaleString('default', { month: 'short' });
                 const weekday = dt.toLocaleString('default', { weekday: 'short' });
-                const dateKey = `${day} ${month}, ${weekday}`;
-                if (!acc[monthKey]) acc[monthKey] = { total: 0, days: {} };
-                if (!acc[monthKey].days[dateKey]) acc[monthKey].days[dateKey] = { total: 0, items: [] };
-                acc[monthKey].total += t.cnt;
-                acc[monthKey].days[dateKey].total += t.cnt;
-                acc[monthKey].days[dateKey].items.push({...t, originalIdx: index});
-                return acc;
-            }, {});
+                const dateKey = `${dayNum.toString().padStart(2,'0')} ${monthShort}, ${weekday}`;
+                const fullISODate = dateKeyRaw; // YYYY-MM-DD for sorting
+                
+                if (!grouped[monthKey]) {
+                    grouped[monthKey] = { total: 0, days: {}, monthTimestamp: dt.getTime() };
+                }
+                if (!grouped[monthKey].days[dateKey]) {
+                    grouped[monthKey].days[dateKey] = { total: 0, items: [], dayTimestamp: new Date(fullISODate).getTime(), fullDate: fullISODate };
+                }
+                grouped[monthKey].total += t.cnt;
+                grouped[monthKey].days[dateKey].total += t.cnt;
+                grouped[monthKey].days[dateKey].items.push({...t, originalIdx: index});
+            });
+
+            // Sort months in ASCENDING order (oldest first)
+            const sortedMonths = Object.keys(grouped).sort((a, b) => {
+                return grouped[a].monthTimestamp - grouped[b].monthTimestamp;
+            });
 
             container.innerHTML = '';
 
-            Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a)).forEach(mKey => {
+            sortedMonths.forEach(mKey => {
                 const monthData = grouped[mKey];
                 let daysHtml = '';
-
-                Object.keys(monthData.days).sort((a,b) => new Date(b) - new Date(a)).forEach(dKey => {
+                
+                // Sort days within month in ASCENDING order (oldest first)
+                const sortedDays = Object.keys(monthData.days).sort((x, y) => {
+                    return monthData.days[x].dayTimestamp - monthData.days[y].dayTimestamp;
+                });
+                
+                sortedDays.forEach(dKey => {
                     const dayData = monthData.days[dKey];
-                    const sortedItems = dayData.items.slice().sort((x,y) => x.comp.localeCompare(y.comp));
+                    // Sort items within day by company name
+                    const sortedItems = dayData.items.slice().sort((x, y) => x.comp.localeCompare(y.comp));
                     const itemsHtml = sortedItems.map((item, idx) => {
-                        const d = new Date(item.time);
+                        const displayDate = item.selectedDate ? new Date(item.selectedDate) : new Date(item.time);
+                        const formattedDate = displayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         return `
                         <div class="record-item">
                             <div class="record-info">
                                 <span class="number-badge">${idx+1}.</span>
                                 <div class="record-content">
-                                    <div class="company-name">${item.comp}</div>
-                                    <div class="pin-line">Pin: ${item.pin} • ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                                    <div class="company-name">${escapeHtml(item.comp)}</div>
+                                    <div class="pin-line">Pin: ${item.pin} • ${formattedDate}</div>
                                 </div>
                             </div>
                             <div class="action-side">
@@ -622,6 +726,16 @@
                 container.appendChild(monthSection);
             });
         }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
         window.toggleSection = function(el) {
             const list = el.nextElementSibling;
@@ -632,7 +746,7 @@
             content.style.display = content.style.display === 'block' ? 'none' : 'block';
         };
 
-        // ---------- FILTER (unchanged) ----------
+        // ---------- FILTER (uses selectedDate) ----------
         window.runFilter = function() {
             const pin = document.getElementById('filter-pin-input').value.trim();
             const monthVal = document.getElementById('filter-month').value;
@@ -644,15 +758,20 @@
             }
 
             const [year, month] = monthVal.split('-').map(Number);
-
             const now = new Date();
             const todayStr = now.toDateString();
-            const dailyMatches = db.filter(t => t.pin == pin && new Date(t.time).toDateString() === todayStr);
+            
+            const dailyMatches = db.filter(t => {
+                const dateStr = t.selectedDate || t.time.split('T')[0];
+                const d = new Date(dateStr);
+                return t.pin == pin && d.toDateString() === todayStr;
+            });
             const dailyTotal = dailyMatches.reduce((sum, t) => sum + t.cnt, 0);
             const dailyCompanies = [...new Set(dailyMatches.map(t => t.comp))].join(', ') || 'None';
 
             const monthMatches = db.filter(t => {
-                const d = new Date(t.time);
+                const dateStr = t.selectedDate || t.time.split('T')[0];
+                const d = new Date(dateStr);
                 return t.pin == pin && d.getFullYear() === year && d.getMonth() + 1 === month;
             });
             const monthTotal = monthMatches.reduce((sum, t) => sum + t.cnt, 0);
@@ -669,7 +788,7 @@
             `;
         };
 
-        // ---------- BULK ENTRY FUNCTIONS (new) ----------
+        // ---------- BULK ENTRY FUNCTIONS ----------
         window.toggleBulkModal = function(show) {
             const m = document.getElementById('bulk-modal');
             if (show !== undefined) {
@@ -678,7 +797,7 @@
                 m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
             }
             if (m.style.display === 'flex') {
-                document.getElementById('bulk-paste-area').value = ''; // clear on open
+                document.getElementById('bulk-paste-area').value = '';
             }
         };
 
@@ -686,21 +805,25 @@
             const raw = document.getElementById('bulk-paste-area').value;
             const lines = raw.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
             const entries = [];
-            // Regex: 6 digits, then company name (any chars), then optional number (default 1)
             const entryRegex = /^(\d{6})\s+(.+?)\s*(\d*)$/;
+            
+            let bulkSelectedDate = document.getElementById('task-date').value;
+            if (!bulkSelectedDate) {
+                showToast("Please select a date before using bulk entry", true);
+                return false;
+            }
 
             for (let line of lines) {
                 const match = line.match(entryRegex);
                 if (match) {
                     const pincode = match[1];
                     let company = match[2].trim();
-                    // Capitalize first letter
                     if (company.length > 0) {
                         company = company.charAt(0).toUpperCase() + company.slice(1);
                     }
                     let taskCount = match[3] ? parseInt(match[3], 10) : 1;
                     if (isNaN(taskCount) || taskCount <= 0) taskCount = 1;
-                    entries.push({ comp: company, pin: pincode, cnt: taskCount });
+                    entries.push({ comp: company, pin: pincode, cnt: taskCount, selectedDate: bulkSelectedDate });
                 }
             }
 
@@ -709,13 +832,13 @@
                 return false;
             }
 
-            // Add all valid entries
             entries.forEach(e => {
                 db.push({ 
                     comp: e.comp, 
                     pin: e.pin, 
                     cnt: e.cnt, 
-                    time: new Date().toISOString() 
+                    time: new Date().toISOString(),
+                    selectedDate: e.selectedDate
                 });
             });
 
@@ -727,7 +850,6 @@
             return true;
         }
 
-        // Wire up bulk save button
         document.getElementById('bulk-save-btn').addEventListener('click', function() {
             const success = addEntriesFromBulk();
             if (success) {
@@ -735,7 +857,6 @@
             }
         });
 
-        // Open bulk modal when clicking Bulk Entry button
         document.getElementById('bulk-entry-btn').addEventListener('click', function() {
             toggleBulkModal(true);
         });
@@ -750,6 +871,7 @@
 
         function init() {
             setDefaultMonth();
+            // DO NOT auto-fill date picker - leave empty
             updateSuggestionPools();
             renderProfile();
             renderHistory();
@@ -758,12 +880,9 @@
 
         init();
 
-        // expose to global for inline event handlers
         window.toggleModal = toggleModal;
         window.updateProfile = updateProfile;
     })();
 </script>
-
-<!-- Tesseract script remains but is unused – all existing functionalities untouched -->
 </body>
 </html>
